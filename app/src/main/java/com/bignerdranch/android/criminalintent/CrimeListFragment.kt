@@ -1,8 +1,12 @@
 package com.bignerdranch.android.criminalintent
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -13,17 +17,32 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.UUID
 
 private const val TAG = "CrimeListFragment"
 
 class CrimeListFragment : Fragment() {
+    /**
+     * Требуемый интерфейс
+     */
+    interface Callbacks {
+        fun onCrimeSelected(crimeId: UUID)
+    } private var callbacks: Callbacks? = null
 
     private lateinit var crimeRecyclerView: RecyclerView
     private var adapter: CrimeAdapter? = CrimeAdapter(emptyList())
     private val crimeListViewModel: CrimeListViewModel by lazy {
         ViewModelProviders.of(this).get(CrimeListViewModel::class.java)
     }
-
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        callbacks = context as Callbacks?
+    }
+    override fun onCreate(savedInstanceState:
+                          Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -50,6 +69,25 @@ class CrimeListFragment : Fragment() {
                     updateUI(crimes)
                 }
             })
+    }
+    override fun onDetach() {
+        super.onDetach()
+        callbacks = null
+    }
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.fragment_crime_list, menu)
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.new_crime -> {
+                val crime = Crime()
+                crimeListViewModel.addCrime(crime)
+                callbacks?.onCrimeSelected(crime.id)
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
     }
 
     private fun updateUI(crimes: List<Crime>){
@@ -80,8 +118,7 @@ class CrimeListFragment : Fragment() {
         }
 
         override fun onClick(v: View) {
-            Toast.makeText(context, "${crime.title} clicked!", Toast.LENGTH_SHORT)
-                .show()
+            callbacks?.onCrimeSelected(crime.id)
         }
     }
 
